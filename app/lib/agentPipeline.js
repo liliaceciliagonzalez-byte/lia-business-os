@@ -15,7 +15,7 @@ function getClient() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 }
 
-async function callAgent(client, { key, system, user, maxTokens = 450 }) {
+async function callAgent(client, { key, system, user, maxTokens = 600 }) {
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: maxTokens,
@@ -28,14 +28,19 @@ async function callAgent(client, { key, system, user, maxTokens = 450 }) {
     .map((b) => b.text)
     .join('');
 
-  const BACKTICK = String.fromCharCode(96);
-  const FENCE = BACKTICK + BACKTICK + BACKTICK;
-  const cleaned = text.split(FENCE).join('').replace(/^json/i, '').trim();
+  // Busca el primer { y el ultimo } en la respuesta. Esto funciona sin
+  // importar si el modelo envolvio el JSON en explicaciones, espacios, o
+  // cualquier otro texto alrededor.
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  const cleaned = (start === -1 || end === -1 || end < start)
+    ? text.trim()
+    : text.slice(start, end + 1);
 
   try {
     return JSON.parse(cleaned);
   } catch {
-    // Si el agente no devolvió JSON limpio, no tumbamos todo el pipeline.
+    // Si el agente no devolvio JSON valido, no tumbamos todo el pipeline.
     return { headline: 'Respuesta no estructurada', raw: cleaned };
   }
 }
@@ -84,7 +89,7 @@ export async function runAgentPipeline(form) {
     key: 'director',
     system: systemPrompt_director(),
     user: userPrompt_director(form, ctx),
-    maxTokens: 1200
+    maxTokens: 2000
   });
   trace.push({
     name: 'Clara',

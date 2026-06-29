@@ -89,7 +89,7 @@ export async function runAgentPipeline(form) {
     key: 'director',
     system: systemPrompt_director(),
     user: userPrompt_director(form, ctx),
-    maxTokens: 2000
+    maxTokens: 3500
   });
   trace.push({
     name: 'Clara',
